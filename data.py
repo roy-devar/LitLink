@@ -6,10 +6,6 @@ import numpy as np
 # Load the dataset from CSV file
 data = pd.read_csv("C:/Users/i3dch/Documents/project 1/goodreads_data.csv")  # Make sure the path to the CSV is correct
 
-# Debugging step: Checking if there are any NaN values in 'Description' column
-print("Checking for NaN values in 'Description' column:")
-print(data['Description'].isna().sum())  # Will print the number of NaN values
-
 # Replace NaN values in 'Description' with a placeholder or empty string
 data['Description'] = data['Description'].fillna('No description available')
 
