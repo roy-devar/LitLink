@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendations for "{{ searched_book.title }}"</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-4">Recommendations for "{{ searched_book.title }}"</h1>
+
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ searched_book.title }}</h5>
+                <form action="{{ url_for('favorite_book', book_id=searched_book.id) }}" method="POST">
+                    <button type="submit" class="btn btn-primary">Add to Favorites</button>
+                </form>
+            </div>
+        </div>
+
+        <h2 class="mt-4">Recommended Books</h2>
+        <div class="row">
+            {% for book in recommendations %}
+                <div class="col-md-3 mb-4">
+                    <div class="card">
+                        <img src="https://via.placeholder.com/150" class="card-img-top" alt="Book Image">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ book['title'] }}</h5>
+                            <form action="{{ url_for('favorite_book', book_id=book['id']) }}" method="POST">
+                                <button type="submit" class="btn btn-primary">Add to Favorites</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary mt-4">Back to Home</a>
+    </div>
+</body>
+</html>

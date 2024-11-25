@@ -5,15 +5,19 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import CreateAcc, LoginAcc
 from flask_sqlalchemy import SQLAlchemy
+from rapidfuzz import process, fuzz
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SECRET_KEY'] = 'your_secret_key'
 db = SQLAlchemy(app)
 
-# Load book data, renaming `Unnamed: 0` column to `id`
+# Load book data and renaming Unnamed: 0 column to id
 bks_data = pd.read_csv("C:/Users/i3dch/Documents/project 1/goodreads_data.csv")
 bks_data = bks_data.rename(columns={'Unnamed: 0': 'id'})
+
+# Extract all book titles from the dataset
+book_titles = bks_data['Book'].dropna().tolist()
 
 # Database models for user and favorite books
 class User(db.Model):
@@ -37,8 +41,12 @@ class Favorite(db.Model):
     user = db.relationship('User', back_populates='favorites')
     book = db.relationship('Book', back_populates='favorites')
 
-# Initialize database with app context
-# Insert books from the CSV into the database
+# Book search function
+def search_book(query, book_titles, limit=5):
+    results = process.extract(query, book_titles, limit=limit, scorer=fuzz.partial_ratio)
+    return [book[0] for book in results if book[1] > 60]
+
+
 with app.app_context():
     # Check if books already exist in the database
     existing_books = set(b.id for b in Book.query.all())
@@ -50,9 +58,7 @@ with app.app_context():
     
     db.session.commit()
 
-    print("Books successfully added to the database.")
-
-# Home page route, main recommendation function
+# Home page route main recommendation function
 @app.route('/', methods=['GET', 'POST'])
 def index():
     recommendations = []
@@ -62,12 +68,10 @@ def index():
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         if user:
-            # Retrieve user's favorite books (pass the actual book objects)
             user_favs = [favorite.book for favorite in user.favorites if favorite.book]
 
     if request.method == 'POST':
         title = request.form['title']
-        # Call the recommendation function to get similar books
         recommendations = combine_recs(title, bks_data)
 
     return render_template('index.html', recommendations=recommendations, favorites=user_favs, user=user)
@@ -107,13 +111,10 @@ def favorite_book(book_id):
         return redirect(url_for('login'))
     
     user_id = session['user_id']
-    
-    # Verify that the book exists in the database
     book = Book.query.get(book_id)
     if book is None:
         return "Book not found", 404
 
-    # Add book to favorites if not already favorited
     existing_fav = Favorite.query.filter_by(user_id=user_id, book_id=book_id).first()
     if not existing_fav:
         new_fav = Favorite(user_id=user_id, book_id=book_id)
@@ -129,17 +130,38 @@ def remove_favorite(book_id):
         return redirect(url_for('login'))
 
     user_id = session['user_id']
-    
-    # Find the favorite record in the database
     favorite = Favorite.query.filter_by(user_id=user_id, book_id=book_id).first()
-    
     if favorite:
-        # Remove the favorite from the database
         db.session.delete(favorite)
         db.session.commit()
     
     return redirect(url_for('index'))
 
+# Search route
+@app.route('/search', methods=['GET'])
+def search():
+    query = request.args.get('q', '')
+    matched_books = search_book(query, book_titles) if query else []
+    return render_template('index.html', books=matched_books, recommendations=[], favorites=[], user=None)
+
+# Route to generate recommendations for a specific book
+@app.route('/recommend/<book_title>')
+def recommend_book(book_title):
+    if book_title not in bks_data['Book'].values:
+        return "Book not found", 404
+
+    recommendations = combine_recs(book_title, bks_data)
+    searched_book = bks_data[bks_data['Book'] == book_title].iloc[0]
+    searched_book_data = {
+        'title': searched_book['Book'],
+        'id': searched_book['id'],
+    }
+
+    return render_template(
+        'recommendations.html',
+        searched_book=searched_book_data,
+        recommendations=recommendations
+    )
 
 # Logout route
 @app.route('/logout')

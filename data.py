@@ -2,26 +2,23 @@ import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 
-
 # Load the dataset from CSV file
 data = pd.read_csv("C:/Users/i3dch/Documents/project 1/goodreads_data.csv")  # Make sure the path to the CSV is correct
 
-# Replace NaN values in 'Description' with a placeholder or empty string
+
+# Replace NaN values in Description with a placeholder or empty string
 data['Description'] = data['Description'].fillna('No description available')
 
-# Debugging step: Ensure all values in 'Description' are strings
+# Ensure all values in 'Description' are strings
 data['Description'] = data['Description'].apply(str)
 
-# Check again for NaN values and print sample descriptions
-print("After replacing NaN values, sample descriptions:")
-print(data['Description'].head())
 
-# Ensure the 'Genres' column is a list (not a string)
+
+# Ensure the 'Genres' column is a list
 data['Genres'] = data['Genres'].apply(lambda x: x.split(', ') if isinstance(x, str) else [])
 
 # Function to get term frequency recommendations
 def get_term_frequency_recommendations(title, data, idx):
-    data['Description'] = data['Description'].fillna('')
     vectorizer = CountVectorizer(stop_words='english')
     try:
         tf_matrix = vectorizer.fit_transform(data['Description'])
@@ -38,8 +35,6 @@ def get_term_frequency_recommendations(title, data, idx):
             recommendations[data['Book'][i]] = score
 
     return recommendations
-
-
 
 # Function to get genre-based recommendations
 def get_genre_recommendations(title, data, idx):
@@ -67,7 +62,6 @@ def combine_recs(title, data, genre_weight=0.6, tf_weight=0.4):
     tf_recs = get_term_frequency_recommendations(title, data, idx)
     g_recs = get_genre_recommendations(title, data, idx)
 
-    # Normalize genre score by the maximum number of genres for any book
     max_genre_count = data['Genres'].apply(len).max()
 
     # Combine the recommendations based on weighted scoring
@@ -83,10 +77,10 @@ def combine_recs(title, data, genre_weight=0.6, tf_weight=0.4):
     # Sort the recommendations by score in descending order
     sorted_recs = sorted(combined_recs.items(), key=lambda x: x[1], reverse=True)
 
-    # Return top recommendations with their book IDs (just a mock ID here)
+    # Return top recommendations with their book IDs
     result = []
     for book, score in sorted_recs[:5]:
-        book_id = data.loc[data['Book'] == book, 'Book'].index[0]  # Mock book ID as index
+        book_id = data.loc[data['Book'] == book, 'Book'].index[0]
         result.append({'title': book, 'score': score, 'id': book_id})
 
     return result

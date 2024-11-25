@@ -30,10 +30,21 @@
         {% endif %}
 
         <h2 class="mt-4">Search for a Book</h2>
-        <form method="POST" class="form-inline justify-content-center">
-            <input type="text" name="title" class="form-control mr-2" placeholder="Enter book title" required>
+        <form method="GET" action="{{ url_for('search') }}" class="form-inline justify-content-center">
+            <input type="text" name="q" class="form-control mr-2" placeholder="Enter book title" required>
             <button type="submit" class="btn btn-success">Search</button>
         </form>
+
+        {% if books %}
+            <h2 class="mt-4">Search Results</h2>
+            <ul class="list-group mt-4">
+                {% for book in books %}
+                    <li class="list-group-item">
+                        <a href="{{ url_for('recommend_book', book_title=book) }}">{{ book }}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
 
         {% if recommendations %}
             <h2 class="mt-4">Recommended Books</h2>
