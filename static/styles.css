@@ -1,0 +1,114 @@
+/* Basic reset */
+body, h1, h2, p, ul, li, form {
+    margin: 0;
+    padding: 0;
+}
+
+/* Body styling */
+body {
+    background-color: #fdf1e2; /* Light cream background */
+    color: #3c2a21; /* Dark chocolate text color */
+    font-family: 'Georgia', serif;
+}
+
+/* Header */
+h1 {
+    font-family: 'Merriweather', serif;
+    font-size: 3em;
+    color: #6d4c41; /* Warm brown */
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Add some space for smaller headings */
+h2 {
+    font-family: 'Merriweather', serif;
+    font-size: 2.2em;
+    color: #6d4c41;
+    margin-top: 30px;
+    text-align: center;
+}
+
+/* Paragraph text */
+p {
+    font-size: 1.1em;
+    line-height: 1.5;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Button styling */
+.btn {
+    font-size: 1em;
+    padding: 10px 20px;
+    border-radius: 30px;
+    text-transform: uppercase;
+}
+
+/* Form input styling */
+input[type="text"] {
+    border: 2px solid #8d6e63;
+    border-radius: 15px;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+
+/* List styling */
+ul.list-group {
+    margin-top: 20px;
+}
+
+ul.list-group-item {
+    background-color: #fff3e0;
+    border: 1px solid #d7ccc8;
+    border-radius: 10px;
+    font-size: 1.1em;
+    margin-bottom: 10px;
+}
+
+/* Book Cards */
+.card {
+    border: none;
+    border-radius: 10px;
+    background-color: #fff8e1;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card-img-top {
+    border-radius: 10px 10px 0 0;
+    object-fit: cover;
+    height: 200px;
+}
+
+/* Card title */
+.card-title {
+    font-size: 1.3em;
+    color: #6d4c41;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+/* Links and interactive elements */
+a {
+    color: #6d4c41;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+a:hover {
+    color: #3c2a21;
+    text-decoration: underline;
+}
+
+form {
+    margin-top: 30px;
+}
+
+/* Cozy Footer (optional) */
+footer {
+    background-color: #3c2a21;
+    color: #fdf1e2;
+    text-align: center;
+    padding: 10px 0;
+    margin-top: 40px;
+}
