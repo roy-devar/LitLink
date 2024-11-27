@@ -1,30 +1,35 @@
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
 # Load the dataset from CSV file
-data = pd.read_csv("C:/Users/i3dch/Documents/project 1/goodreads_data.csv")  # Ensure the path is correct
+data = pd.read_csv("C:/Users/i3dch/Documents/project 1/goodreads_data.csv") # Reads csv and converts it into a pandas dataframe
 
-# Clean the dataset
-data['Description'] = data['Description'].fillna('No description available').apply(str)
+data['Description'] = data['Description'].fillna('No description available').apply(str) 
 data['Genres'] = data['Genres'].apply(lambda x: x.split(', ') if isinstance(x, str) else [])
 
 # Function to get term frequency recommendations
 def get_term_frequency_recommendations(title, data, idx):
-    vectorizer = CountVectorizer(stop_words='english')
+    word_counter = TfidfVectorizer(stop_words='english') # It converts a collection of text into a matrix of token counts
+
+    # Then it makes a matrix that shows for each book what unique words they contain
     try:
-        tf_matrix = vectorizer.fit_transform(data['Description'])
-        cosine_sim = np.dot(tf_matrix[idx], tf_matrix.T).toarray().flatten()
+        tfidf_matrix = word_counter.fit_transform(data['Description']) # This line creates the matrix
+        sim = cosine_similarity(tfidf_matrix[idx], tfidf_matrix).flatten() # Computes the cosine simularity which is the best way to see similarities between 2 books
+                                                   
     except ValueError as e:
         print(f"Error in CountVectorizer: {e}")
         return {}
 
     recommendations = {}
-    for i, score in enumerate(cosine_sim):
+    for i, score in enumerate(sim):
         if i != idx:  # Skip the current book
             recommendations[data.iloc[i]['Book']] = score
+    # Grabs every book index (except itself) and puts it in a dictionary with idx and cosine sim scores
+    sorted_recommendations = dict(sorted(recommendations.items(), key=lambda x: x[1], reverse=True))
 
-    return recommendations
+    return sorted_recommendations
 
 # Function to get genre-based recommendations
 def get_genre_recommendations(title, data, idx):
@@ -38,12 +43,12 @@ def get_genre_recommendations(title, data, idx):
             if overlap > 0:
                 recommendations[data.iloc[i]['Book']] = overlap
 
-    return recommendations
+    return recommendations # Returns the number of genres they have in common
 
 # Combine term frequency and genre-based recommendations
 def combine_recs(title, data, genre_weight=0.6, tf_weight=0.4):
     try:
-        idx = data.index[data['Book'] == title][0]
+        idx = data.index[data['Book'] == title][0] # Finds index of the book inputed
     except IndexError:
         print(f"Book '{title}' not found in data!")
         return []
@@ -78,10 +83,3 @@ def combine_recs(title, data, genre_weight=0.6, tf_weight=0.4):
             continue
 
     return result
-
-# Example call to combine recommendations function
-if __name__ == "__main__":
-    title = 'To Kill a Mockingbird'
-    recommendations = combine_recs(title, data)
-    print(f"Recommendations for {title}:")
-    print(recommendations)

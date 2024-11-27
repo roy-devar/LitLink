@@ -7,25 +7,28 @@ from flask_sqlalchemy import SQLAlchemy
 from rapidfuzz import process, fuzz
 import requests
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app = Flask(__name__) # Intialize Flask object
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db' # app.config is a dictionary like object that you store settings in for your app
+#^^^^^ You have to name the database key this or else SQLAlchemy won't recongnize it 
+# sqlite:///app.db specifies the database type and the file which it will use to store your database locally
 app.config['SECRET_KEY'] = 'your_secret_key'
-db = SQLAlchemy(app)
+db = SQLAlchemy(app) # SQLAlchemy is basically allows you to interact with databses using python instead of raw SQL
+#^^^^^ This makes a database obj tied to my flask app
 
 # Load book data and rename columns
 bks_data = pd.read_csv("C:/Users/i3dch/Documents/project 1/goodreads_data.csv")
 bks_data = bks_data.rename(columns={'Unnamed: 0': 'id'})
 
 # Extract all book titles
-book_titles = bks_data['Book'].dropna().tolist()
+book_titles = bks_data['Book'].dropna().tolist() # This drops any na values
 
 # Database models
-class User(db.Model):
+class User(db.Model): # This is a class that maps a table to a database. Each instance of a model is a row in that table
     __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(150), nullable=False)
-    favorites = db.relationship('Favorite', back_populates='user')
+    id = db.Column(db.Integer, primary_key=True) # Id is what identifies each user
+    username = db.Column(db.String(100), unique=True, nullable=False) # Username must be unqiue and can't be null
+    password = db.Column(db.String(100), nullable=False) # Password can't be null
+    favorites = db.relationship('Favorite', back_populates='user') # Link user to many relationships with Favorite
 
 class Book(db.Model):
     __tablename__ = 'books'
@@ -42,9 +45,9 @@ class Favorite(db.Model):
     book = db.relationship('Book', back_populates='favorites')
 
 # Fuzzy search function
-def search_book(query, book_titles, limit=5):
-    results = process.extract(query, book_titles, limit=limit, scorer=fuzz.partial_ratio)
-    return [book[0] for book in results if book[1] > 60]
+def search_book(search, book_titles, limit=5):
+    results = process.extract(search, book_titles, limit=limit, scorer=fuzz.partial_ratio) # Returns list of tuples with most similar
+    return [book[0] for book in results if book[1] > 60] # Returns list of matches with scores greater than 60
 
 # Fetch book cover using Google Books API
 def fetch_book_cover(title):
@@ -57,25 +60,25 @@ def fetch_book_cover(title):
 
 # Initialize database with books
 with app.app_context():
-    existing_books = set(b.id for b in Book.query.all())
+    existing_books = set(b.id for b in Book.query.all()) # Grabs all books and extracts their ids into a set called existing_books
     for _, row in bks_data.iterrows():
         if row['id'] not in existing_books:
-            new_book = Book(id=row['id'], title=row['Book'])
+            new_book = Book(id=row['id'], title=row['Book']) # Creating a instance of the model
             db.session.add(new_book)
     db.session.commit()
 
 # Home page route
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST']) # GET renders homepage with no input and POST handdles for submissions like searching for a book
 def index():
     recommendations = []
     searched_book = None
     user_favs = []
     user = None
 
-    if 'user_id' in session:
+    if 'user_id' in session: # Checks if the User is logged in 
         user = User.query.get(session['user_id'])
         if user:
-            user_favs = [
+            user_favs = [ # Grabs all users fav books
                 {
                     "title": favorite.book.title,
                     "cover": fetch_book_cover(favorite.book.title),
