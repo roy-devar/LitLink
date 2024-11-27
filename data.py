@@ -3,18 +3,10 @@ from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 
 # Load the dataset from CSV file
-data = pd.read_csv("C:/Users/i3dch/Documents/project 1/goodreads_data.csv")  # Make sure the path to the CSV is correct
+data = pd.read_csv("C:/Users/i3dch/Documents/project 1/goodreads_data.csv")  # Ensure the path is correct
 
-
-# Replace NaN values in Description with a placeholder or empty string
-data['Description'] = data['Description'].fillna('No description available')
-
-# Ensure all values in 'Description' are strings
-data['Description'] = data['Description'].apply(str)
-
-
-
-# Ensure the 'Genres' column is a list
+# Clean the dataset
+data['Description'] = data['Description'].fillna('No description available').apply(str)
 data['Genres'] = data['Genres'].apply(lambda x: x.split(', ') if isinstance(x, str) else [])
 
 # Function to get term frequency recommendations
@@ -22,17 +14,15 @@ def get_term_frequency_recommendations(title, data, idx):
     vectorizer = CountVectorizer(stop_words='english')
     try:
         tf_matrix = vectorizer.fit_transform(data['Description'])
+        cosine_sim = np.dot(tf_matrix[idx], tf_matrix.T).toarray().flatten()
     except ValueError as e:
         print(f"Error in CountVectorizer: {e}")
         return {}
 
-    # Get the cosine similarity between the selected book and all other books
-    cosine_sim = np.dot(tf_matrix[idx], tf_matrix.T).toarray().flatten()
-
     recommendations = {}
     for i, score in enumerate(cosine_sim):
         if i != idx:  # Skip the current book
-            recommendations[data['Book'][i]] = score
+            recommendations[data.iloc[i]['Book']] = score
 
     return recommendations
 
@@ -46,7 +36,7 @@ def get_genre_recommendations(title, data, idx):
         if i != idx:  # Skip the current book
             overlap = len(book_genres.intersection(set(genre_list)))
             if overlap > 0:
-                recommendations[data['Book'][i]] = overlap
+                recommendations[data.iloc[i]['Book']] = overlap
 
     return recommendations
 
@@ -55,14 +45,14 @@ def combine_recs(title, data, genre_weight=0.6, tf_weight=0.4):
     try:
         idx = data.index[data['Book'] == title][0]
     except IndexError:
-        print("Book not found in data!")
+        print(f"Book '{title}' not found in data!")
         return []
 
     # Get term frequency and genre-based recommendations
     tf_recs = get_term_frequency_recommendations(title, data, idx)
     g_recs = get_genre_recommendations(title, data, idx)
 
-    max_genre_count = data['Genres'].apply(len).max()
+    max_genre_count = max(data['Genres'].apply(len), default=1)
 
     # Combine the recommendations based on weighted scoring
     combined_recs = {}
@@ -80,13 +70,18 @@ def combine_recs(title, data, genre_weight=0.6, tf_weight=0.4):
     # Return top recommendations with their book IDs
     result = []
     for book, score in sorted_recs[:5]:
-        book_id = data.loc[data['Book'] == book, 'Book'].index[0]
-        result.append({'title': book, 'score': score, 'id': book_id})
+        try:
+            book_id = data.loc[data['Book'] == book, 'id'].values[0]
+            result.append({'Book': book, 'score': score, 'id': book_id})
+        except IndexError:
+            print(f"Error finding ID for book '{book}'. Skipping...")
+            continue
 
     return result
 
 # Example call to combine recommendations function
-title = 'Book A'
-recommendations = combine_recs(title, data)
-print(f"Recommendations for {title}")
-print(recommendations)
+if __name__ == "__main__":
+    title = 'To Kill a Mockingbird'
+    recommendations = combine_recs(title, data)
+    print(f"Recommendations for {title}:")
+    print(recommendations)

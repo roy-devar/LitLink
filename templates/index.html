@@ -7,71 +7,71 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
-<body class="bg-light text-dark">
+<body>
     <div class="container">
-        <h1 class="text-center my-4">Welcome to LiteratureLink</h1>
+        <h1 class="mt-4">Welcome to LiteratureLink</h1>
 
         {% if user %}
-            <p class="text-center">Welcome, {{ user.username }}!</p>
+            <p>Welcome, {{ user.username }}!</p>
             <a href="{{ url_for('logout') }}" class="btn btn-warning">Logout</a>
+
             <h2 class="mt-4">Your Favorite Books</h2>
-            <ul class="list-group">
+            <div class="row">
                 {% for book in favorites %}
-                    <li class="list-group-item">
-                        {{ book.title }} 
-                        <form action="{{ url_for('remove_favorite', book_id=book.id) }}" method="POST" style="display:inline;">
-                            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-                        </form>
-                    </li>
+                    <div class="col-md-3 mb-4">
+                        <div class="card">
+                            <img src="{{ book['cover'] }}" class="book-cover" alt="Cover of {{ book['title'] }}">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ book['title'] }}</h5>
+                                <form action="{{ url_for('remove_favorite', book_id=book.id) }}" method="POST">
+                                    <button type="submit" class="btn btn-danger">Remove from Favorites</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 {% endfor %}
-            </ul>
+            </div>
         {% else %}
-            <p class="text-center">You are not logged in. <a href="{{ url_for('login') }}">Login</a> or <a href="{{ url_for('create_account') }}">Create an account</a>.</p>
+            <p>You are not logged in. <a href="{{ url_for('login') }}">Login</a> or <a href="{{ url_for('create_account') }}">Create an account</a>.</p>
         {% endif %}
 
         <h2 class="mt-4">Search for a Book</h2>
-        <form method="GET" action="{{ url_for('search') }}" class="form-inline justify-content-center">
-            <input type="text" name="q" class="form-control mr-2" placeholder="Enter book title" required>
+        <form method="POST" class="form-inline">
+            <input type="text" name="title" class="form-control mr-2" placeholder="Enter book title" required>
             <button type="submit" class="btn btn-success">Search</button>
         </form>
 
-        {% if books %}
-            <h2 class="mt-4">Search Results</h2>
-            <ul class="list-group mt-4">
-                {% for book in books %}
-                    <li class="list-group-item">
-                        <a href="{{ url_for('recommend_book', book_title=book) }}">{{ book }}</a>
-                    </li>
-                {% endfor %}
-            </ul>
+        {% if searched_book %}
+            <h2 class="mt-4">Searched Book</h2>
+            <div class="card mb-4" style="max-width: 200px;">
+                <img src="{{ searched_book['cover'] }}" class="book-cover" alt="Cover of {{ searched_book['title'] }}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ searched_book['title'] }}</h5>
+                    <form action="{{ url_for('favorite_book', book_id=searched_book.id) }}" method="POST">
+                        <button type="submit" class="btn btn-primary">Favorite</button>
+                    </form>
+                </div>
+            </div>
         {% endif %}
 
         {% if recommendations %}
             <h2 class="mt-4">Recommended Books</h2>
             <div class="row">
                 {% for book in recommendations %}
-                    {% if book %}
-                        <div class="col-md-3 mb-4">
-                            <div class="card">
-                                <img src="https://via.placeholder.com/150" class="card-img-top" alt="Book Image">
-                                <div class="card-body">
-                                    <h5 class="card-title">{{ book['title'] }}</h5>
-                                    <form action="{{ url_for('favorite_book', book_id=book['id']) }}" method="POST">
-                                        <button type="submit" class="btn btn-primary">Favorite</button>
-                                    </form>
-                                </div>
+                    <div class="col-md-3 mb-4">
+                        <div class="card">
+                            <img src="{{ book['cover'] }}" class="book-cover" alt="Cover of {{ book['title'] }}">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ book['title'] }}</h5>
+                                <form action="{{ url_for('favorite_book', book_id=book.id) }}" method="POST">
+                                    <button type="submit" class="btn btn-primary">Add to Favorites</button>
+                                </form>
                             </div>
                         </div>
-                    {% else %}
-                        <li>Book data is missing or incomplete</li>
-                    {% endif %}
+                    </div>
                 {% endfor %}
             </div>
         {% endif %}
     </div>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

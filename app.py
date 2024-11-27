@@ -1,4 +1,3 @@
-# Imports and initial setup
 import pandas as pd
 from data import combine_recs
 from flask import Flask, render_template, request, redirect, url_for, session
@@ -6,20 +5,21 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from forms import CreateAcc, LoginAcc
 from flask_sqlalchemy import SQLAlchemy
 from rapidfuzz import process, fuzz
+import requests
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SECRET_KEY'] = 'your_secret_key'
 db = SQLAlchemy(app)
 
-# Load book data and renaming Unnamed: 0 column to id
+# Load book data and rename columns
 bks_data = pd.read_csv("C:/Users/i3dch/Documents/project 1/goodreads_data.csv")
 bks_data = bks_data.rename(columns={'Unnamed: 0': 'id'})
 
-# Extract all book titles from the dataset
+# Extract all book titles
 book_titles = bks_data['Book'].dropna().tolist()
 
-# Database models for user and favorite books
+# Database models
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -41,40 +41,72 @@ class Favorite(db.Model):
     user = db.relationship('User', back_populates='favorites')
     book = db.relationship('Book', back_populates='favorites')
 
-# Book search function
+# Fuzzy search function
 def search_book(query, book_titles, limit=5):
     results = process.extract(query, book_titles, limit=limit, scorer=fuzz.partial_ratio)
     return [book[0] for book in results if book[1] > 60]
 
+# Fetch book cover using Google Books API
+def fetch_book_cover(title):
+    try:
+        url = f"https://www.googleapis.com/books/v1/volumes?q=intitle:{title}"
+        response = requests.get(url).json()
+        return response['items'][0]['volumeInfo']['imageLinks']['thumbnail']
+    except (KeyError, IndexError):
+        return "https://via.placeholder.com/128x196?text=No+Cover"
 
+# Initialize database with books
 with app.app_context():
-    # Check if books already exist in the database
     existing_books = set(b.id for b in Book.query.all())
-    
     for _, row in bks_data.iterrows():
         if row['id'] not in existing_books:
             new_book = Book(id=row['id'], title=row['Book'])
             db.session.add(new_book)
-    
     db.session.commit()
 
-# Home page route main recommendation function
+# Home page route
 @app.route('/', methods=['GET', 'POST'])
 def index():
     recommendations = []
+    searched_book = None
     user_favs = []
     user = None
 
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         if user:
-            user_favs = [favorite.book for favorite in user.favorites if favorite.book]
+            user_favs = [
+                {
+                    "title": favorite.book.title,
+                    "cover": fetch_book_cover(favorite.book.title),
+                    "id": favorite.book.id
+                }
+                for favorite in user.favorites if favorite.book
+            ]
 
     if request.method == 'POST':
         title = request.form['title']
-        recommendations = combine_recs(title, bks_data)
+        matched_titles = search_book(title, book_titles)
+        if matched_titles:
+            searched_title = matched_titles[0]
+            searched_book_row = bks_data[bks_data['Book'] == searched_title].iloc[0]
+            searched_book = {
+                "id": searched_book_row['id'],
+                "title": searched_book_row['Book'],
+                "cover": fetch_book_cover(searched_book_row['Book'])
+            }
+            recommendations = combine_recs(searched_title, bks_data)
+            recommendations = [
+                {
+                    "id": rec["id"],
+                    "title": rec["Book"],
+                    "cover": fetch_book_cover(rec["Book"])
+                }
+                for rec in recommendations
+            ]
 
-    return render_template('index.html', recommendations=recommendations, favorites=user_favs, user=user)
+    return render_template('index.html', searched_book=searched_book, recommendations=recommendations, favorites=user_favs, user=user)
+
 
 # Registration route
 @app.route('/register', methods=['GET', 'POST'])
@@ -109,7 +141,7 @@ def login():
 def favorite_book(book_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     user_id = session['user_id']
     book = Book.query.get(book_id)
     if book is None:
@@ -120,7 +152,7 @@ def favorite_book(book_id):
         new_fav = Favorite(user_id=user_id, book_id=book_id)
         db.session.add(new_fav)
         db.session.commit()
-    
+
     return redirect(url_for('index'))
 
 # Route to remove a book from favorites
@@ -134,7 +166,7 @@ def remove_favorite(book_id):
     if favorite:
         db.session.delete(favorite)
         db.session.commit()
-    
+
     return redirect(url_for('index'))
 
 # Search route
@@ -151,10 +183,17 @@ def recommend_book(book_title):
         return "Book not found", 404
 
     recommendations = combine_recs(book_title, bks_data)
+    for rec in recommendations:
+        if 'Book' in rec:
+            rec['cover'] = fetch_book_cover(rec['Book'])
+        else:
+            rec['cover'] = "https://via.placeholder.com/128x196?text=No+Cover"
+
     searched_book = bks_data[bks_data['Book'] == book_title].iloc[0]
     searched_book_data = {
         'title': searched_book['Book'],
         'id': searched_book['id'],
+        'cover': fetch_book_cover(searched_book['Book'])
     }
 
     return render_template(
